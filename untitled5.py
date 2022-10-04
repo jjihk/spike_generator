@@ -6,23 +6,22 @@ Created on Thu Jul 21 14:07:40 2022
 """
 
 import numpy as np
-import seaborn as sns
+# import seaborn as sns
 import scipy.stats
 import matplotlib.pyplot as plt
 from brian2 import *
 from math import factorial, exp
-import h5py
-
+# import h5py
 # %matplotlib inline
 
 class Spike_generator :
     def __init__(self, excitatory, firing_rate, duration, delta, connectivity, refractory) :
         self.num_of_neurons = len(connectivity[0]) # total neurons
-        self.excitatory = excitatory # excitatory weight [1ms, 2ms, 3ms] 
-        self.firing_rate = firing_rate #spontaneous firing rate
+        self.excitatory = excitatory # excitatory weight [1ms, 2ms, 3ms,...] 
+        self.firing_rate = firing_rate # spontaneous firing rate
         self.duration = duration # duration time
         self.delta = delta # unit time
-        self.num_of_bin = round(duration/delta) #total time / unit time
+        self.num_of_bin = round(duration/delta) # total time / unit time
         self.history_window = len(excitatory) # The period during which excitatory affects.
         self.connectivity = connectivity # network 
         self.spike_record = {} # record how many seconds ago a spike occurred
@@ -40,87 +39,47 @@ class Spike_generator :
             
             probability = self.__weight() # probability = exp (ln(firing rate) + weight) * unit time
             # print(self.spike_record)                              # The value should be obtained from the spike record up to this time.
-            print(probability)
+            # print(probability)
             
             
             for i in range (self.num_of_neurons) : # Check whether this neuron is refractory time or not.
-                    
-                if(i==2) :
-                    if 1 in self.spike_record[i] :
-                        self.__spike_record_update(self.spike_record[i]) # In refractory time, the probability is not calculated.
-                        
-                    else :
-                        
-                        r = np.random.rand()    # Random number to compare with probability
-                        probability[i] += np.log(self.firing_rate/Hz) #probability = exp (ln(firing rate) + weight) * unit time
-                        probability[i] = np.exp(probability[i])*(delta/second) #probability = exp (ln(firing rate) + weight) * unit time
-                        
-                        self.__spike_record_update(self.spike_record[i])
-                                
-                               
-                        if(probability[i] >= r) : # spike occured 
-                            time[i][k] = (k+1)*delta # record current time
-                            count[i] +=1 # The number of spikes
-                            for j in range (self.history_window) :
-                                if (self.spike_record[i][j] == 0) :
-                                    self.spike_record[i][j] =1
-                                    break
-                                else :
-                                    pass
-                                
-                        else : # update spike history
-                            pass    
+
+                if 1 in self.spike_record[i] :
+                    self.__spike_record_update(self.spike_record[i]) # In refractory time, the probability is not calculated.
                     
                 else :
                     
+                    r = np.random.rand()    # Random number to compare with probability
                     probability[i] += np.log(self.firing_rate/Hz) #probability = exp (ln(firing rate) + weight) * unit time
                     probability[i] = np.exp(probability[i])*(delta/second) #probability = exp (ln(firing rate) + weight) * unit time
-                    
+                    ###
+                    if (i==0) :
+                        probability[i] = 100*0.001
+                    else :
+                        pass
+                    ###
                     self.__spike_record_update(self.spike_record[i])
                             
                            
-                     # spike occured 
-                    time[i][k] = (k+1)*delta # record current time
-                    count[i] +=1 # The number of spikes
-                    for j in range (self.history_window) :
-                        if (self.spike_record[i][j] == 0) :
-                            self.spike_record[i][j] =1
-                            break
-                        else :
-                            pass
+                    if(probability[i] >= r) : # spike occured 
+                        time[i][k] = (k+1)*delta # record current time
+                        count[i] +=1 # The number of spikes
+                        for j in range (self.history_window) :
+                            if (self.spike_record[i][j] == 0) :
+                                self.spike_record[i][j] =1
+                                break
+                            else :
+                                pass
                             
-                    
-                # if 1 in self.spike_record[i] :
-                #     self.__spike_record_update(self.spike_record[i]) # In refractory time, the probability is not calculated.
-                    
-                # else :
-                    
-                #     r = np.random.rand()    # Random number to compare with probability
-                #     probability[i] += np.log(self.firing_rate/Hz) #probability = exp (ln(firing rate) + weight) * unit time
-                #     probability[i] = np.exp(probability[i])*(delta/second) #probability = exp (ln(firing rate) + weight) * unit time
-                    
-                #     self.__spike_record_update(self.spike_record[i])
-                            
-                           
-                #     if(probability[i] >= r) : # spike occured 
-                #         time[i][k] = (k+1)*delta # record current time
-                #         count[i] +=1 # The number of spikes
-                #         for j in range (self.history_window) :
-                #             if (self.spike_record[i][j] == 0) :
-                #                 self.spike_record[i][j] =1
-                #                 break
-                #             else :
-                #                 pass
-                            
-                #     else : # update spike history
-                #         pass    
+                    else : # update spike history
+                        pass    
                 
             # print(probability)
             # print(self.spike_record)
         
         
         # print(time) 
-        #print(count)
+        print(count)
 
         spike_time = [0 for col in range(sum(count)) ]    
         sub_index  = [[] for row in range(self.num_of_neurons)]
@@ -203,7 +162,7 @@ class Spike_generator :
         plt.xlabel("time(s)")
         plt.ylabel("neuron number")
         
-    def Draw_hist(self, repetition,lambda_,draw_num_of_spike = False ,draw_isi = False) :
+    def Draw_hist(self, repetition,lambda_,lambda_1,draw_num_of_spike = False ,draw_isi = False) :
         
         if (draw_num_of_spike == True and draw_isi == True) : 
             num_of_spikes = self.__reset()
@@ -236,21 +195,26 @@ class Spike_generator :
                 
         #print(num_of_spikes)
         #print(isi)
-        bin_edges =  np.arange(0,150,5)
-        x = np.arange(150)
+        bin_edges =  np.arange(0,30,1)
+        x = np.arange(30)
         if(draw_num_of_spike == True) :
             for k in range(self.num_of_neurons) :
                 figure(dpi=600)
-                pd1 = np.array([self.pois_dist(n, lambda_[k]*(self.duration / (1000*ms))) for n in range(150)])
+                pd1 = np.array([self.pois_dist(n, lambda_[k]*(self.duration / (1000*ms))) for n in range(30)])#poisson
+                pd2 = np.array([self.pois_dist(n, lambda_1[k]*(self.duration / (1000*ms))) for n in range(30)])#poisson
                 plt.xlabel('num_of_spikes')
                 plt.ylabel('density')
                 plt.title('neuron {} Firing rate distribution'.format(k))
                 plt.hist(num_of_spikes[k],bin_edges,alpha = 0.5, density = True)
+                if(lambda_1[k] == 0) :
+                    pass
+                else :
+                    plt.plot(x, pd2, color='green')
                 plt.plot(x, pd1, color='lightcoral')
-                plt.xlim(0,150)
+                plt.xlim(0,30)
                 plt.ylim(0,0.11)
-                plt.xticks(np.arange(0,150,10))
-                plt.yticks(np.arange(0,0.11,0.02))
+                plt.xticks(np.arange(0,30,10))
+                plt.yticks(np.arange(0,0.21,0.02))
                 plt.show()
         else :
             pass
@@ -306,45 +270,101 @@ class Spike_generator :
         return subject
 
 
-excitatory = [ 1,1,1,1,1,1,1,1,1,1 ]
-firing_rate =5 * Hz
-duration = 10*ms
+
+
+    def Draw_weight_hist(self, repetition) :
+           
+        num_of_spikes = self.__reset()
+        for i in range(repetition) : 
+            index, spike_time = self.spike_gen() # repeat simulation
+            # print(spike_time)
+
+                
+            for j in range(self.num_of_neurons) : # Record the firing rate every iteration
+                num_of_spikes[j].append(index.count(j))
+                # print(len(spike_time))
+        
+        for k in range(self.num_of_neurons):
+            num_of_spikes[k].sort()
+            total_num = len(num_of_spikes[k])
+            total_num = round(total_num/2)
+            num_of_spikes[k] = num_of_spikes[k][total_num]
+        return num_of_spikes
+     
+
+
+def weight (tau, duration) :
+    excitatory = [0 for col in range (duration)] 
+    
+    for i in range (duration) :
+        # excitatory[i] = 0.5*np.log(2)*np.exp(-(i/tau))
+        excitatory[i] = 0.1*np.exp(-(i/tau))*10
+    return excitatory
+
+
+
+weight_duration = 40
+tau = 20
+ref_excitatory = weight(tau, weight_duration)
+excitatory = [ 0 for col in range (weight_duration)]
+firing_rate =10* Hz
+duration = 1000*ms
 delta = 1*ms
 refractory = 1*ms
-
-
-connectivity = [  [ 0, 0, 1 ],
-                  [ 0, 0, 1 ],
-                  [ 0, 0, 0 ]]
-
-
-# connectivity = [  [  0,  0,  1 ],
-#                   [  1,  0,  1 ],
-#                   [  1,  0,  0 ] ]
-# [38,20,38]
-
-# connectivity = [  [ 0, 1, 1, 0, 0 ],
-#                   [ 0, 0, 1, 0, 0 ],
-#                   [ 0, 0, 0, 1, 1 ], 
-#                   [ 1, 1, 0, 0, 1 ],
-#                   [ 1, 1, 0, 0, 0 ]  ]
-# [50,70,63,35,50]
-
-# connectivity = [  [ 0, 1, 0, 1, 1, 0, 0, 0 ],
-#                   [ 0, 0, 1, 1, 1, 1, 0, 0 ],
-#                   [ 0, 0, 0, 0, 1, 1, 0, 0 ], 
+# connectivity = [  [ 0, 0, 1, 0, 0, 0, 0, 1 ],
+#                   [ 1, 0, 0, 0, 0, 0, 0, 0 ],
+#                   [ 0, 0, 0, 0, 0, 0, 1, 0 ], 
+#                   [ 0, 0, 1, 0, 1, 0, 0, 1 ],
+#                   [ 0, 1, 0, 0, 0, 0, 0, 0 ],
 #                   [ 0, 0, 0, 0, 1, 0, 1, 0 ],
-#                   [ 0, 0, 0, 0, 0, 1, 0, 1 ],
 #                   [ 0, 0, 0, 0, 0, 0, 0, 0 ],
-#                   [ 0, 0, 0, 0, 1, 0, 0, 1 ],
-#                   [ 0, 0, 0, 1, 0, 1, 0, 0 ]
-#                   ]
-# [20,25,28,55,115,110,33,65,83]
+#                   [ 1, 0, 0, 1, 0, 0, 0, 0 ] ]
+connectivity = [ [ 0 , 1 ],
+                 [ 0 , 0 ] ]
+Repetition = 500
 
+
+# print(excitatory)
+# ////////////////////////////////////////
+# z = {}
+# for i in range (len(connectivity[0])) :
+#     z[i] = []
+
+# n = np.arange(1,35,0.5)
+# for i in range (len(n)) :
+
+#     for l in range(weight_duration) :
+#         excitatory[l] = ref_excitatory[l]* (n[i])
+#     print(excitatory)
+#     A = Spike_generator( excitatory, firing_rate, duration, delta, connectivity, refractory)
+#     # print(excitatory)
+#     num_of_spikes = A.Draw_weight_hist(Repetition)
+#     # print(num_of_spikes)
+#     for j in range (len(connectivity[0])) :
+#         z[j].append(num_of_spikes[j])
     
-Repetition = 1000
-A = Spike_generator( excitatory, firing_rate, duration, delta, connectivity, refractory)
+# print(z)    
+
+# for k in range(len(connectivity[0])) :
+#       figure(dpi=600)
+#       plt.xlabel('Multiplication of reference weight')
+#       plt.ylabel('num_of_spikes')
+#       plt.title('neuron {} Firing rate distribution'.format(k))
+#       # x = [ n  in range(20)]
+#       x = n
+#       plt.plot(x,z[k])
+#       plt.ylim(0,30)
+#       plt.yticks(np.arange(0,31,5))
+#       plt.show()
+# /////////////////////////////////////////////////////
+# for i in range(weight_duration) :
+#     ref_excitatory[i] *= 35
+
+
+# aa = sum(ref_excitatory)
+# print(aa)
+A = Spike_generator( ref_excitatory, firing_rate, duration, delta, connectivity, refractory)
 B,c=A.spike_gen()
 # print(B);print(c)
 # A.Draw_spike(B,c)
-# A.Draw_hist(Repetition,[20,20,20],True,True)
+A.Draw_hist(Repetition,[20,5],[0,0],True,False)
