@@ -15,15 +15,15 @@ from math import factorial, exp
 # %matplotlib inline
 
 class Spike_generator :
-    def __init__(self, excitatory, firing_rate, duration, delta, connectivity, refractory) :
-        self.num_of_neurons = len(connectivity[0]) # total neurons
-        self.excitatory = excitatory # excitatory weight [1ms, 2ms, 3ms,...] 
-        self.firing_rate = firing_rate # spontaneous firing rate
-        self.duration = duration # duration time
-        self.delta = delta # unit time
-        self.num_of_bin = round(duration/delta) # total time / unit time
-        self.history_window = len(excitatory) # The period during which excitatory affects.
-        self.connectivity = connectivity # network 
+    def __init__(self, weight, spontaneous_firing_rate, operation_time, time_step, network, refractory) :
+        self.num_of_neurons = len(network[0]) # total neurons
+        self.weight = weight # excitatory weight [1ms, 2ms, 3ms,...] 
+        self.spontaneous_firing_rate = spontaneous_firing_rate # spontaneous firing rate
+        self.operation_time = operation_time # operation_time
+        self.time_step = time_step # unit time
+        self.num_of_bin = round(operation_time/time_step) # Number of calculations during operation time
+        self.history_window = len(weight) # The period during which weight affects.
+        self.network = network # network 
         self.spike_record = {} # record how many seconds ago a spike occurred
         self.refractory = round(refractory/ms)
         
@@ -33,36 +33,30 @@ class Spike_generator :
         self.spike_record = [[0 for col in range(self.history_window)] for row in range(self.num_of_neurons)] #reset
         count = [0 for col in range(self.num_of_neurons)] #reset
         time = [[0 for col in range(self.num_of_bin)] for row in range(self.num_of_neurons)] #reset        
-        p = np.array([])
+
         
         for k in range (self.num_of_bin) :
             
-            probability = self.__weight() # probability = exp (ln(firing rate) + weight) * unit time
-            # print(self.spike_record)                              # The value should be obtained from the spike record up to this time.
-            # print(probability)
+            probability = self.__weightsum() # probability =  weight
+            # print(self.spike_record)       # for test
+            # print(probability)             # for test
             
             
-            for i in range (self.num_of_neurons) : # Check whether this neuron is refractory time or not.
+            for i in range (self.num_of_neurons) : # Repeat for all neurons at the current time
 
-                if 1 in self.spike_record[i] :
+                if 1 in self.spike_record[i] :  # Check whether this neuron is refractory time or not.
                     self.__spike_record_update(self.spike_record[i]) # In refractory time, the probability is not calculated.
                     
                 else :
                     
                     r = np.random.rand()    # Random number to compare with probability
-                    probability[i] += np.log(self.firing_rate/Hz) #probability = exp (ln(firing rate) + weight) * unit time
-                    probability[i] = np.exp(probability[i])*(delta/second) #probability = exp (ln(firing rate) + weight) * unit time
-                    ###
-                    # if (i==0) :
-                    #     probability[i] = 20*0.001
-                    # else :
-                    #     pass
-                    ###
+                    probability[i] += np.log(self.spontaneous_firing_rate/Hz) #probability = ln(firing rate) + weight
+                    probability[i] = np.exp(probability[i])*(time_step/second) #probability = exp (ln(firing rate) + weight) * unit time
+
                     self.__spike_record_update(self.spike_record[i])
-                            
                            
                     if(probability[i] >= r) : # spike occured 
-                        time[i][k] = (k+1)*delta # record current time
+                        time[i][k] = (k+1)*time_step # record current time
                         count[i] +=1 # The number of spikes
                         for j in range (self.history_window) :
                             if (self.spike_record[i][j] == 0) :
@@ -71,27 +65,25 @@ class Spike_generator :
                             else :
                                 pass
                             
-                    else : # update spike history
+                    else : # no spike
                         pass    
                 
-            # print(probability)
-            # print(probability[1])
-            # print(self.spike_record)
-                # print((np.array(probability[1])))
-                
-            # p = np.append(p, np.round_(np.array(probability[0]),3))
-        # p.reshape(100,10)
-        # print(len(p))
-        # print(p.reshape(100,10))
+            # print(probability)  #for test
+            # print(self.spike_record)  #for test
+
         
-        # print(time) 
-        print(count)
-        # if(sum(count)/self.num_of_neurons>50) :
-        if(sum(count[0])>50) :
-            f = open("C:/Users/my/Desktop/test.txt","a")
-            f.write(str(count)+"\n")
-            f.close()
+        # print(time) #for test
+        print(count) #for test
+
+        #########  for test (Record burst)
+        # if(sum(count[0])>50) :
+        #     f = open("C:/Users/my/Desktop/test.txt","a")
+        #     f.write(str(count)+"\n")
+        #     f.close()
+        #########
         
+        
+        ######### save spike time
         spike_time = [0 for col in range(sum(count)) ]    
         sub_index  = [[] for row in range(self.num_of_neurons)]
         index =[]
@@ -117,7 +109,7 @@ class Spike_generator :
     # def verification(self, probability) :
         
 
-    def __weight(self) : # weight Calculation
+    def __weightsum(self) : # weight Calculation
         sum_weight = {}
         for j in range (self.num_of_neurons) : #reset
             sum_weight[j] = 0
@@ -136,8 +128,8 @@ class Spike_generator :
                 
     def __weight_update(self, sum_weight ,source_index, history) : 
         for j in range (self.num_of_neurons) : # if neuron[source_index] spiked before
-            if (self.connectivity[source_index][j] == 1) : # if a neuron source has an excitability effect on neuron j
-                sum_weight[j] += self.excitatory[history] # excitatory weight is added to j's weight
+            if (self.network[source_index][j] == 1) : # if a neuron source has an excitability effect on neuron j
+                sum_weight[j] += self.weight[history] # excitatory weight is added to j's weight
             else :
                 pass
         
@@ -305,24 +297,24 @@ class Spike_generator :
 
 
 def weight (tau, duration) :
-    excitatory = [0 for col in range (duration)] 
+    weight = [0 for col in range (duration)] 
     
     for i in range (duration) :
-        # excitatory[i] = 0.5*np.log(2)*np.exp(-(i/tau))
-        excitatory[i] = 0.1*np.exp(-(i/tau)) * 12.5
-    return excitatory
+        # weight[i] = 0.5*np.log(2)*np.exp(-(i/tau))
+        weight[i] = 0.1*np.exp(-(i/tau)) * 12.5
+    return weight
 
 
 
 weight_duration = 40
 tau = 20
 ref_excitatory = weight(tau, weight_duration)
-excitatory = [ 0 for col in range (weight_duration)]
-firing_rate =5* Hz
-duration = 1000*ms
+weight = [ 0 for col in range (weight_duration)]
+spontaneous_firing_rate =5* Hz
+operation_time = 1000*ms
 delta = 1*ms
 refractory = 1*ms
-connectivity = [  [ 0, 0, 1, 0, 0, 0, 0, 0 ],
+network = [  [ 0, 0, 1, 0, 0, 0, 0, 0 ],
                   [ 1, 0, 0, 0, 0, 0, 0, 0 ],
                   [ 0, 0, 0, 0, 0, 0, 1, 0 ], 
                   [ 0, 1, 1, 0, 1, 0, 0, 0 ],
@@ -330,33 +322,33 @@ connectivity = [  [ 0, 0, 1, 0, 0, 0, 0, 0 ],
                   [ 0, 0, 0, 0, 1, 0, 1, 0 ],
                   [ 0, 0, 0, 0, 0, 0, 0, 0 ],
                   [ 1, 0, 0, 1, 0, 0, 0, 0 ] ]
-# connectivity = [ [ 0 , 1 ],
+# network = [ [ 0 , 1 ],
 #                   [ 0 , 0 ] ]
 Repetition = 1000
 
 
-# print(excitatory)
+# print(weight)
 # ////////////////////////////////////////
 # z = {}
-# for i in range (len(connectivity[0])) :
+# for i in range (len(network[0])) :
 #     z[i] = []
 
 # n = np.arange(1,35,0.5)
 # for i in range (len(n)) :
 
 #     for l in range(weight_duration) :
-#         excitatory[l] = ref_excitatory[l]* (n[i])
-#     print(excitatory)
-#     A = Spike_generator( excitatory, firing_rate, duration, delta, connectivity, refractory)
-#     # print(excitatory)
+#         weight[l] = ref_excitatory[l]* (n[i])
+#     print(weight)
+#     A = Spike_generator( weight, spontaneous_firing_rate, operation_time, time_step, network, refractory)
+#     # print(weight)
 #     num_of_spikes = A.Draw_weight_hist(Repetition)
 #     # print(num_of_spikes)
-#     for j in range (len(connectivity[0])) :
+#     for j in range (len(network[0])) :
 #         z[j].append(num_of_spikes[j])
     
 # print(z)    
 
-# for k in range(len(connectivity[0])) :
+# for k in range(len(network[0])) :
 #       figure(dpi=600)
 #       plt.xlabel('Multiplication of reference weight')
 #       plt.ylabel('num_of_spikes')
@@ -375,7 +367,7 @@ Repetition = 1000
 
 # aa = sum(ref_excitatory)
 # print(aa)
-A = Spike_generator( ref_excitatory, firing_rate, duration, delta, connectivity, refractory)
+A = Spike_generator( ref_excitatory, spontaneous_firing_rate, operation_time, time_step, network, refractory)
 # B,c,count=A.spike_gen()
 
 # for i in range(1000) :    
